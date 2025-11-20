@@ -14,15 +14,22 @@ connectToDatabase();
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-app.use(cors({
-  origin: ["http://localhost:8081", "http://localhost:3000"],
-  credentials: true,
-  optionsSuccessStatus: 200,
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:8081", "http://localhost:3000"],
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
 
 import authRoutes from "./src/routes/auth.routes.js";
+import serviceTypeRoutes from "./src/routes/serviceType.routes.js";
 
-app.use("/api/advik-security", authRoutes);
+const staticRoutes = [authRoutes, serviceTypeRoutes];
+
+staticRoutes.forEach((route) => {
+  app.use("/api/security", route);
+});
 
 app.use((req, res, next) => {
   res.status(404).json({ error: "Not Found" });
