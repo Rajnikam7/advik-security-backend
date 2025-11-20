@@ -1,10 +1,19 @@
 import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema(
+const complaintSchema = new mongoose.Schema(
   {
     serviceType: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ServiceType",
+      required: true,
+    },
+    servicePriority: {
+      type: String,
+      // enum: ["Standard", "Express", "Urgent"],
+      required: true,
+    },
+    pricing: {
+      type: Number,
       required: true,
     },
     customerId: {
@@ -20,15 +29,26 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Open", "Resolved"],
+      enum: ["Open","Assigned","InProgress", "Resolved"],
       default: "Open",
     },
-    location:{type:String,},
-    paymentStatus:{
-
+    location: {
+      type: String,
     },
-    assets:[]
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "success", "failed"],
+      default: "pending",
+    },
+    paymentId: {
+      type: String,
+    },
+    attachmentUrl: {
+      type: [String],
+      required: false,
+    },
   },
   { timestamps: true }
 );
-export default mongoose.model("Complaint", userSchema);
+
+export default mongoose.model("Complaint", complaintSchema);

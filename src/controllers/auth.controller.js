@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import { admin } from "../config/firebase.js";
+import validator from "validator";
 
 const generateToken = (user, isProfileComplete) => {
   return jwt.sign(
@@ -185,5 +186,56 @@ export const getProfile = async (req, res) => {
   } catch (err) {
     console.error("Get profile error:", err);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+export const editProfile = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findById(userId);
+    if (!user || user.isDeleted) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const { name, email, phone } = req.body;
+    const updates = {};
+
+    if (name !== undefined) updates.name = name.trim();
+
+    if (email !== undefined) {
+      const normalized = email.trim().toLowerCase();
+      if (!validator.isEmail(normalized)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      if (normalized !== (user.email || "").toLowerCase()) {
+        const existing = await User.findOne({
+          email: normalized,
+          _id: { $ne: userId },
+        });
+        if (existing) {
+          return res.status(409).json({ message: "Email already in use" });
+        }
+        updates.email = normalized;
+      }
+    }
+
+    if (phone !== undefined) updates.phone = phone.trim();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updates },
+      { new: true }
+    ).select("-password -token");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      data: updatedUser,
+    });
+  } catch (err) {
+    console.error("Edit profile error:", err);
+    return res.status(500).json({ message: "Server Error" });
   }
 };
