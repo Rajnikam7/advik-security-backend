@@ -14,7 +14,7 @@ router.get("/service-types", authMiddleware, getServiceTypes);
 router.post(
   "/service-types",
   authMiddleware,
-  authorizeRoles("super-admin", "customer"),
+  authorizeRoles("super-admin"),
   createServiceType
 );
 

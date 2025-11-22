@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { admin } from "../config/firebase.js";
 import validator from "validator";
 
-const generateToken = (user, isProfileComplete) => {
+const generateAccessToken = (user, isProfileComplete) => {
   return jwt.sign(
     {
       id: user._id,
@@ -11,7 +11,17 @@ const generateToken = (user, isProfileComplete) => {
       isProfileComplete,
     },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: process.env.ACCESS_TOKEN_EXPIRY }
+    { expiresIn: '15m' } // Short-lived access token
+  );
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id,
+    },
+    process.env.REFRESH_TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: '7d' } // Long-lived refresh token
   );
 };
 
@@ -36,19 +46,23 @@ export const testLoginUser = async (req, res) => {
 
     const isProfileComplete = !!user.name && !!user.phone && !!user.email;
 
-    const token = generateToken(user, isProfileComplete);
+    const accessToken = generateAccessToken(user, isProfileComplete);
+    const refreshToken = generateRefreshToken(user);
 
-    // Save token to user collection
-    user.token = token;
+    // Save tokens to user collection
+    user.token = accessToken;
+    user.refreshToken = refreshToken;
     await user.save();
 
     return res.status(200).json({
       message: "Test user logged in successfully",
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
         phone: user.phone,
         name: user.name,
+        email: user.email,
         isProfileComplete,
       },
     });
@@ -91,14 +105,17 @@ export const verifyOrCreateUser = async (req, res) => {
 
     const isProfileComplete = !!user.name && !!user.email && !!user.phone;
 
-    const token = generateToken(user, isProfileComplete);
+    const accessToken = generateAccessToken(user, isProfileComplete);
+    const refreshToken = generateRefreshToken(user);
 
-    user.token = token;
+    user.token = accessToken;
+    user.refreshToken = refreshToken;
     await user.save();
 
     return res.status(200).json({
       message: "User verified or created",
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
         phone: user.phone,
@@ -117,7 +134,9 @@ export const verifyOrCreateUser = async (req, res) => {
 export const register = async (req, res) => {
   try {
     const { name, email } = req.body;
-    const userId = req.user._id;
+    const userId = req.user._id || req.user.id;
+
+    console.log('Register request:', { name, email, userId });
 
     if (!name || !email) {
       return res.status(400).json({ message: "Name and email are required" });
@@ -125,6 +144,7 @@ export const register = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) {
+      console.error('User not found:', userId);
       return res.status(404).json({ message: "User not found" });
     }
 
@@ -137,14 +157,19 @@ export const register = async (req, res) => {
     user.email = email;
 
     const isProfileComplete = !!user.name && !!user.email && !!user.phone;
-    const token = generateToken(user, isProfileComplete);
+    const accessToken = generateAccessToken(user, isProfileComplete);
+    const refreshToken = generateRefreshToken(user);
 
-    user.token = token;
+    user.token = accessToken;
+    user.refreshToken = refreshToken;
     await user.save();
+
+    console.log('Registration successful:', user._id);
 
     res.status(200).json({
       message: "Registration completed successfully",
-      token,
+      token: accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
