@@ -6,6 +6,7 @@ import {
   getComplaintById,
   getAllComplaints,
   updateComplaintStatus,
+  submitFeedback,
 } from "../controllers/complaint.controller.js";
 import { authMiddleware, authorizeRoles } from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -26,6 +27,11 @@ router.patch(
 );
 router.get("/complaints", authMiddleware, getUserComplaints);
 router.get("/complaints/:complaintId", authMiddleware, getComplaintById);
+router.patch(
+  "/complaints/:complaintId/feedback",
+  authMiddleware,
+  submitFeedback
+);
 
 // Admin routes
 router.get(

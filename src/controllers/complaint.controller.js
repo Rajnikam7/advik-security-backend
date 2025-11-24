@@ -55,6 +55,13 @@ export const createComplaint = async (req, res) => {
       attachmentUrl: attachmentUrls,
       status: "Open",
       paymentStatus: "pending",
+      statusHistory: [
+        {
+          status: "Open",
+          timestamp: new Date(),
+          updatedBy: customerId,
+        },
+      ],
     });
 
     const populatedComplaint = await Complaint.findById(complaint._id)
@@ -148,7 +155,8 @@ export const getComplaintById = async (req, res) => {
       customerId,
     })
       .populate("serviceType", "serviceName description")
-      .populate("customerId", "name email phone");
+      .populate("customerId", "name email phone")
+      .populate("statusHistory.updatedBy", "name");
 
     if (!complaint) {
       return res.status(404).json({ message: "Complaint not found" });
@@ -208,7 +216,7 @@ export const updateComplaintStatus = async (req, res) => {
     const { complaintId } = req.params;
     const { status } = req.body;
 
-    if (!["Open", "Assigned", "InProgress", "Resolved"].includes(status)) {
+    if (!["Open", "Assigned", "InProgress", "Resolved", "Closed"].includes(status)) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
@@ -226,11 +234,20 @@ export const updateComplaintStatus = async (req, res) => {
     }
 
     complaint.status = status;
+    
+    // Add to status history
+    complaint.statusHistory.push({
+      status: status,
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+    });
+    
     await complaint.save();
 
     const populatedComplaint = await Complaint.findById(complaint._id)
       .populate("serviceType", "serviceName description")
-      .populate("customerId", "name email phone");
+      .populate("customerId", "name email phone")
+      .populate("statusHistory.updatedBy", "name");
 
     res.status(200).json({
       message: "Complaint status updated successfully",
@@ -238,6 +255,68 @@ export const updateComplaintStatus = async (req, res) => {
     });
   } catch (err) {
     console.error("Update complaint status error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+
+// Submit feedback and close complaint (Customer)
+export const submitFeedback = async (req, res) => {
+  try {
+    const { complaintId } = req.params;
+    const { rating, feedback } = req.body;
+    const customerId = req.user.id;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    const complaint = await Complaint.findOne({
+      _id: complaintId,
+      customerId,
+    });
+
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    if (complaint.status !== "Resolved") {
+      return res.status(400).json({
+        message: "Can only submit feedback for resolved complaints",
+      });
+    }
+
+    if (complaint.status === "Closed") {
+      return res.status(400).json({
+        message: "Feedback already submitted for this complaint",
+      });
+    }
+
+    complaint.rating = rating;
+    complaint.feedback = feedback || "";
+    complaint.status = "Closed";
+    complaint.closedAt = new Date();
+    
+    // Add to status history
+    complaint.statusHistory.push({
+      status: "Closed",
+      timestamp: new Date(),
+      updatedBy: customerId,
+    });
+    
+    await complaint.save();
+
+    const populatedComplaint = await Complaint.findById(complaint._id)
+      .populate("serviceType", "serviceName description")
+      .populate("customerId", "name email phone")
+      .populate("statusHistory.updatedBy", "name");
+
+    res.status(200).json({
+      message: "Feedback submitted successfully",
+      data: populatedComplaint,
+    });
+  } catch (err) {
+    console.error("Submit feedback error:", err);
     res.status(500).json({ message: "Server Error" });
   }
 };

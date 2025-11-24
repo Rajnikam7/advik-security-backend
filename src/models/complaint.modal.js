@@ -29,7 +29,7 @@ const complaintSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Open","Assigned","InProgress", "Resolved"],
+      enum: ["Open", "Assigned", "InProgress", "Resolved", "Closed"],
       default: "Open",
     },
     location: {
@@ -47,6 +47,37 @@ const complaintSchema = new mongoose.Schema(
       type: [String],
       required: false,
     },
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+    feedback: {
+      type: String,
+      default: null,
+    },
+    closedAt: {
+      type: Date,
+      default: null,
+    },
+    statusHistory: [
+      {
+        status: {
+          type: String,
+          enum: ["Open", "Assigned", "InProgress", "Resolved", "Closed"],
+          required: true,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        updatedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
