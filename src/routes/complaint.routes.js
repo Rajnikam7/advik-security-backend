@@ -37,13 +37,13 @@ router.patch(
 router.get(
   "/admin/complaints",
   authMiddleware,
-  // authorizeRoles("super-admin"),
+  authorizeRoles("super-admin", "employee"),
   getAllComplaints
 );
 router.patch(
   "/admin/complaints/:complaintId/status",
   authMiddleware,
-  // authorizeRoles("super-admin"),
+  authorizeRoles("super-admin", "employee"),
   updateComplaintStatus
 );
 

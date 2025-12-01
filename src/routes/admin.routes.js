@@ -13,11 +13,11 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // Dashboard statistics
-router.get('/dashboard/stats', authorizeRoles('super-admin', 'employee'), getDashboardStats);
+router.get('/admin/dashboard/stats', authorizeRoles('super-admin', 'employee'), getDashboardStats);
 
 // User management
-router.get('/users', authorizeRoles('super-admin', 'employee'), getAllUsers);
-router.get('/users/:userId', authorizeRoles('super-admin', 'employee'), getUserById);
-router.put('/users/:userId/role', authorizeRoles('super-admin'), updateUserRole);
+router.get('/admin/users', authorizeRoles('super-admin', 'employee'), getAllUsers);
+router.get('/admin/users/:userId', authorizeRoles('super-admin', 'employee'), getUserById);
+router.put('/admin/users/:userId/role', authorizeRoles('super-admin'), updateUserRole);
 
 export default router;
