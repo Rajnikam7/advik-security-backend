@@ -42,6 +42,11 @@ export const testLoginUser = async (req, res) => {
       role = "super-admin";
       testPhone = `+91${phone}`;
     }
+    // Employee test user
+    else if (phone === "7777777777" && otp === "777777") {
+      role = "employee";
+      testPhone = `+91${phone}`;
+    }
     // Invalid credentials
     else {
       return res.status(400).json({ message: "Invalid test credentials" });
@@ -52,8 +57,8 @@ export const testLoginUser = async (req, res) => {
     if (!user) {
       user = await User.create({
         phone: testPhone,
-        name: role === "super-admin" ? "Admin User" : undefined,
-        email: role === "super-admin" ? "admin@adviksecurity.com" : undefined,
+        name: role === "super-admin" ? "Admin User" : role === "employee" ? "Employee User" : undefined,
+        email: role === "super-admin" ? "admin@adviksecurity.com" : role === "employee" ? "employee@adviksecurity.com" : undefined,
         isVerified: true,
         role: role,
       });
