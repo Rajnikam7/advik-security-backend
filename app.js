@@ -28,8 +28,9 @@ app.use("/uploads", express.static("uploads"));
 import authRoutes from "./src/routes/auth.routes.js";
 import serviceTypeRoutes from "./src/routes/serviceType.routes.js";
 import complaintRoutes from "./src/routes/complaint.routes.js";
+import adminRoutes from "./src/routes/admin.routes.js";
 
-const staticRoutes = [authRoutes, serviceTypeRoutes, complaintRoutes];
+const staticRoutes = [authRoutes, serviceTypeRoutes, complaintRoutes, adminRoutes];
 
 staticRoutes.forEach((route) => {
   app.use("/api/security", route);

@@ -6,7 +6,8 @@
   "main": "app.js",
   "scripts": {
     "start": "node bin/www",
-    "dev": "nodemon bin/www"
+    "dev": "nodemon bin/www",
+    "migrate:roles": "node src/scripts/migrateRoles.js"
   },
   "keywords": [],
   "author": "",

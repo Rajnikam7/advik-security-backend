@@ -29,19 +29,40 @@ export const testLoginUser = async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    // Only allow fixed test number + OTP
-    if (phone !== "9999999999" || otp !== "999999") {
+    let role = "customer";
+    let testPhone = phone;
+
+    // Customer test user
+    if (phone === "9999999999" && otp === "999999") {
+      role = "customer";
+      testPhone = `+91${phone}`;
+    }
+    // Super-admin test user
+    else if (phone === "8888888888" && otp === "888888") {
+      role = "super-admin";
+      testPhone = `+91${phone}`;
+    }
+    // Invalid credentials
+    else {
       return res.status(400).json({ message: "Invalid test credentials" });
     }
 
     // Check if user exists, else create
-    let user = await User.findOne({ phone: `+91${phone}` });
+    let user = await User.findOne({ phone: testPhone });
     if (!user) {
       user = await User.create({
-        phone: `+91${phone}`,
+        phone: testPhone,
+        name: role === "super-admin" ? "Admin User" : undefined,
+        email: role === "super-admin" ? "admin@adviksecurity.com" : undefined,
         isVerified: true,
-        role: ["customer"],
+        role: role,
       });
+    } else {
+      // Update role if it changed
+      if (user.role !== role) {
+        user.role = role;
+        await user.save();
+      }
     }
 
     const isProfileComplete = !!user.name && !!user.phone && !!user.email;
@@ -63,6 +84,7 @@ export const testLoginUser = async (req, res) => {
         phone: user.phone,
         name: user.name,
         email: user.email,
+        role: user.role,
         isProfileComplete,
       },
     });
@@ -99,7 +121,7 @@ export const verifyOrCreateUser = async (req, res) => {
       user = await User.create({
         phone,
         isVerified: true,
-        role: ["customer"],
+        role: "customer",
       });
     }
 

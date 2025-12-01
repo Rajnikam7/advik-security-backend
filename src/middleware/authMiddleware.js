@@ -35,7 +35,7 @@ export const authorizeRoles = (...roles) => {
       return res.status(403).json({ message: "Access denied" });
     }
 
-    const hasRole = roles.some((role) => req.user.role.includes(role));
+    const hasRole = roles.includes(req.user.role);
 
     if (!hasRole) {
       return res.status(403).json({ message: "Insufficient permissions" });
