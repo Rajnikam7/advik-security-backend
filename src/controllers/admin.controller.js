@@ -153,3 +153,251 @@ export const updateUserRole = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+// Get complaint by ID (Admin only)
+export const getComplaintById = async (req, res) => {
+  try {
+    const { complaintId } = req.params;
+
+    const complaint = await Complaint.findById(complaintId)
+      .populate("serviceType", "serviceName description")
+      .populate("customerId", "name email phone")
+      .populate("assignedTo", "name email phone role")
+      .populate("statusHistory.updatedBy", "name");
+
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    res.status(200).json({
+      message: "Complaint retrieved successfully",
+      data: complaint,
+    });
+  } catch (err) {
+    console.error("Get complaint by ID error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Assign complaint to employee (Admin only)
+export const assignComplaint = async (req, res) => {
+  try {
+    const { complaintId } = req.params;
+    const { employeeId } = req.body;
+
+    // Verify employee exists and has employee role
+    const employee = await User.findById(employeeId);
+    if (!employee || employee.isDeleted || employee.role !== 'employee') {
+      return res.status(400).json({ message: "Invalid employee ID" });
+    }
+
+    const complaint = await Complaint.findById(complaintId);
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    // Update complaint
+    complaint.assignedTo = employeeId;
+    complaint.status = "Assigned";
+    
+    // Add to status history
+    complaint.statusHistory.push({
+      status: "Assigned",
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+      notes: `Assigned to ${employee.name}`,
+    });
+    
+    await complaint.save();
+
+    const populatedComplaint = await Complaint.findById(complaint._id)
+      .populate("serviceType", "serviceName description")
+      .populate("customerId", "name email phone")
+      .populate("assignedTo", "name email phone role")
+      .populate("statusHistory.updatedBy", "name");
+
+    res.status(200).json({
+      message: "Complaint assigned successfully",
+      data: populatedComplaint,
+    });
+  } catch (err) {
+    console.error("Assign complaint error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Update complaint status (Admin only)
+export const updateComplaintStatus = async (req, res) => {
+  try {
+    const { complaintId } = req.params;
+    const { status, notes } = req.body;
+
+    if (!["Open", "Assigned", "InProgress", "Resolved", "Closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const complaint = await Complaint.findById(complaintId);
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    complaint.status = status;
+    
+    // Add to status history
+    complaint.statusHistory.push({
+      status: status,
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+      notes: notes || "",
+    });
+    
+    await complaint.save();
+
+    const populatedComplaint = await Complaint.findById(complaint._id)
+      .populate("serviceType", "serviceName description")
+      .populate("customerId", "name email phone")
+      .populate("assignedTo", "name email phone role")
+      .populate("statusHistory.updatedBy", "name");
+
+    res.status(200).json({
+      message: "Complaint status updated successfully",
+      data: populatedComplaint,
+    });
+  } catch (err) {
+    console.error("Update complaint status error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Get all employees (for assignment dropdown)
+export const getAllEmployees = async (req, res) => {
+  try {
+    const employees = await User.find({ 
+      role: 'employee', 
+      isDeleted: false 
+    })
+    .select('name email phone')
+    .sort({ name: 1 });
+
+    res.status(200).json({
+      message: "Employees retrieved successfully",
+      data: employees,
+    });
+  } catch (err) {
+    console.error("Get employees error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Register new employee (Super-admin only)
+export const registerEmployee = async (req, res) => {
+  try {
+    const { name, email, phone } = req.body;
+
+    // Validation
+    if (!name || !email || !phone) {
+      return res.status(400).json({ 
+        message: "Name, email, and phone are required" 
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { email: email.toLowerCase() },
+        { phone: phone }
+      ],
+      isDeleted: false
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: "User with this email or phone already exists" 
+      });
+    }
+
+    // Create new employee
+    const employee = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      role: 'employee',
+      isVerified: true, // Admin-created employees are pre-verified
+    });
+
+    // Return employee data without sensitive fields
+    const employeeData = {
+      id: employee._id,
+      name: employee.name,
+      email: employee.email,
+      phone: employee.phone,
+      role: employee.role,
+      createdAt: employee.createdAt,
+    };
+
+    res.status(201).json({
+      message: "Employee registered successfully",
+      data: employeeData,
+    });
+  } catch (err) {
+    console.error("Register employee error:", err);
+    
+    // Handle duplicate key error
+    if (err.code === 11000) {
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({
+        message: `${field} already exists`,
+      });
+    }
+    
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// Update payment status (Admin only)
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const { complaintId } = req.params;
+    const { paymentStatus, paymentId, notes } = req.body;
+
+    if (!["pending", "success", "failed"].includes(paymentStatus)) {
+      return res.status(400).json({ message: "Invalid payment status" });
+    }
+
+    const complaint = await Complaint.findById(complaintId);
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    const oldPaymentStatus = complaint.paymentStatus;
+    complaint.paymentStatus = paymentStatus;
+    
+    if (paymentId) {
+      complaint.paymentId = paymentId;
+    }
+
+    // Add to status history
+    complaint.statusHistory.push({
+      status: complaint.status,
+      timestamp: new Date(),
+      updatedBy: req.user.id,
+      notes: `Payment status updated from ${oldPaymentStatus} to ${paymentStatus}${notes ? `. ${notes}` : ''}`,
+    });
+    
+    await complaint.save();
+
+    const populatedComplaint = await Complaint.findById(complaint._id)
+      .populate("serviceType", "serviceName description")
+      .populate("customerId", "name email phone")
+      .populate("assignedTo", "name email phone role")
+      .populate("statusHistory.updatedBy", "name");
+
+    res.status(200).json({
+      message: "Payment status updated successfully",
+      data: populatedComplaint,
+    });
+  } catch (err) {
+    console.error("Update payment status error:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};

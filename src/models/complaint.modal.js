@@ -21,6 +21,11 @@ const complaintSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     subject: {
       type: String,
     },
@@ -75,6 +80,10 @@ const complaintSchema = new mongoose.Schema(
         updatedBy: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
+        },
+        notes: {
+          type: String,
+          default: "",
         },
       },
     ],
