@@ -2,9 +2,20 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 import { connectToDatabase } from "./src/db/index.js";
 import { initializeFirebase } from "./src/config/firebase.js";
 import cors from "cors";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Initialize Firebase
 initializeFirebase();
@@ -23,7 +34,7 @@ app.use(
 );
 
 // Serve static files from uploads directory
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(uploadDir));
 
 import authRoutes from "./src/routes/auth.routes.js";
 import serviceTypeRoutes from "./src/routes/serviceType.routes.js";
