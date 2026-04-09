@@ -16,10 +16,10 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(
   cors({
-    origin: ["http://localhost:8081", "http://localhost:3000","http://10.0.2.2"],
+    origin: true,
     credentials: true,
     optionsSuccessStatus: 200,
-  })
+  }),
 );
 
 // Serve static files from uploads directory
@@ -31,7 +31,13 @@ import complaintRoutes from "./src/routes/complaint.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import employeeRoutes from "./src/routes/employee.routes.js";
 
-const staticRoutes = [authRoutes, serviceTypeRoutes, complaintRoutes, adminRoutes, employeeRoutes];
+const staticRoutes = [
+  authRoutes,
+  serviceTypeRoutes,
+  complaintRoutes,
+  adminRoutes,
+  employeeRoutes,
+];
 
 staticRoutes.forEach((route) => {
   app.use("/api/security", route);
