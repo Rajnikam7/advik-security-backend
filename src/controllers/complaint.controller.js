@@ -4,13 +4,8 @@ import ServiceType from "../models/serviceType.model.js";
 // Create complaint (Customer) - with image upload
 export const createComplaint = async (req, res) => {
   try {
-    const {
-      serviceType,
-      servicePriority,
-      subject,
-      description,
-      location,
-    } = req.body;
+    const { serviceType, servicePriority, subject, description, location } =
+      req.body;
     const customerId = req.user.id;
 
     if (!serviceType) {
@@ -29,20 +24,24 @@ export const createComplaint = async (req, res) => {
 
     // Validate servicePriority and get pricing
     const selectedPriority = service.servicePriorities.find(
-      (p) => p.servicePriority === servicePriority
+      (p) => p.servicePriority === servicePriority,
     );
 
     if (!selectedPriority) {
       return res.status(400).json({
         message: "Invalid service priority for this service type",
-        availablePriorities: service.servicePriorities.map((p) => p.servicePriority),
+        availablePriorities: service.servicePriorities.map(
+          (p) => p.servicePriority,
+        ),
       });
     }
 
     // Generate URLs for uploaded files
-    const attachmentUrls = req.files ? req.files.map((file) => {
-      return `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
-    }) : [];
+    const attachmentUrls = req.files
+      ? req.files.map((file) => {
+          return `${req.protocol}://${req.get("host")}/uploads/${file.filename}`;
+        })
+      : [];
 
     const complaint = await Complaint.create({
       serviceType,
@@ -216,7 +215,9 @@ export const updateComplaintStatus = async (req, res) => {
     const { complaintId } = req.params;
     const { status } = req.body;
 
-    if (!["Open", "Assigned", "InProgress", "Resolved", "Closed"].includes(status)) {
+    if (
+      !["Open", "Assigned", "InProgress", "Resolved", "Closed"].includes(status)
+    ) {
       return res.status(400).json({ message: "Invalid status" });
     }
 
@@ -234,14 +235,14 @@ export const updateComplaintStatus = async (req, res) => {
     }
 
     complaint.status = status;
-    
+
     // Add to status history
     complaint.statusHistory.push({
       status: status,
       timestamp: new Date(),
       updatedBy: req.user.id,
     });
-    
+
     await complaint.save();
 
     const populatedComplaint = await Complaint.findById(complaint._id)
@@ -259,7 +260,6 @@ export const updateComplaintStatus = async (req, res) => {
   }
 };
 
-
 // Submit feedback and close complaint (Customer)
 export const submitFeedback = async (req, res) => {
   try {
@@ -268,7 +268,9 @@ export const submitFeedback = async (req, res) => {
     const customerId = req.user.id;
 
     if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 1 and 5" });
     }
 
     const complaint = await Complaint.findOne({
@@ -296,14 +298,14 @@ export const submitFeedback = async (req, res) => {
     complaint.feedback = feedback || "";
     complaint.status = "Closed";
     complaint.closedAt = new Date();
-    
+
     // Add to status history
     complaint.statusHistory.push({
       status: "Closed",
       timestamp: new Date(),
       updatedBy: customerId,
     });
-    
+
     await complaint.save();
 
     const populatedComplaint = await Complaint.findById(complaint._id)

@@ -17,6 +17,9 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Make uploadDir available globally
+process.env.UPLOAD_DIR = uploadDir;
+
 // Initialize Firebase
 initializeFirebase();
 
